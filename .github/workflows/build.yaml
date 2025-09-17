@@ -16,10 +16,5 @@ jobs:
             username: ${{ secrets.DOCKER_USERNAME }}
             password: ${{ secrets.DOCKER_PASSWORD }}
             registry: docker.io
-<<<<<<< HEAD
             repository: ${{ secrets.DOCKER_USERNAME }}/cd
             tag_with_sha: true
-=======
-            repository: <your-dockerhub-username>/cd
-            tag_with_sha: true
->>>>>>> 4927b15a8bea03c18ae323bf3f8b3ae7e6b0dfff
