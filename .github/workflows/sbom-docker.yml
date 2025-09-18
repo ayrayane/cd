@@ -60,9 +60,9 @@ jobs:
 
       # Step 8: OWASP Dependency Check
       - name: OWASP Dependency Check
-        uses: ayrayane/dependency-check-action@master
+        uses: owasp/dependency-check-action@v2
         with:
-          Project-Name: TestApp
+          project: cd
 
       # Step 9: Archive dependency check reports
       - name: Archive dependency check reports
