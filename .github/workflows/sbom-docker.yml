@@ -60,7 +60,7 @@ jobs:
 
       # Step 8: OWASP Dependency Check
       - name: OWASP Dependency Check
-        uses: owasp/dependency-check-action@v2
+        uses: OWASP/dependency-check-action@v2.5.0
         with:
           project: cd
 
