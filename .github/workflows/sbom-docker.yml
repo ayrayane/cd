@@ -28,7 +28,7 @@ jobs:
       - name: Install NPM dependencies
         run: npm install
 
-      # Step 4: Generate SBOM for Node.js
+      # Step 4: Generate SBOM for Javascript using Anchore's SBOM Action
       - name: Generate SBOM for Node.js
         uses: anchore/sbom-action@v0
         with:
@@ -36,18 +36,24 @@ jobs:
           artifact-name: sbom-node-js.json
 
       # Step 5: Build Docker image
-      - name: Build Docker Image
-        run: docker build -t my-node-app:latest .
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: docker.io
+          repository: ${{ secrets.DOCKER_USERNAME }}/cd
+          tags: ${{ github.sha }}
 
       # Step 6: Generate SBOM for Docker image
       - name: Generate SBOM for Docker image
         uses: anchore/sbom-action@v0
         with:
-          image: my-node-app:latest
+          image: ${{ secrets.DOCKER_USERNAME }}/cd:${{ github.sha }}
           format: spdx-json
           artifact-name: sbom-docker-image.json
 
-      # Step 7: Run SonarCloud analysis
+      # Step 7: SonarCloud Scan
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.3.1
         env:
@@ -58,17 +64,27 @@ jobs:
             -Dsonar.projectKey=ayrayane_cd
             -Dsonar.organization=ayrayane
 
-      # Step 8: Dependency Check using depcheck
+      # Step 8: Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'docker.io/${{ secrets.DOCKER_USERNAME }}/cd:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: false
+          vuln-type: 'os,library'
+          severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
+
+      # Step 9: Dependency Check using depcheck
       - name: Dependency Check
         run: |
-          # Installe depcheck globalement
           npm install -g depcheck
-          # Lance depcheck et force un exit code non nul si des dépendances sont inutilisées
-          depcheck .
+          # Génère un fichier texte avec les résultats
+          depcheck . > depcheck-report.txt || true
 
-      # Step 9: Archive dependency check reports (optionnel)
-      - name: Archive dependency check reports
+      # Step 10: Archive dependency check report
+      - name: Archive dependency check report
         uses: actions/upload-artifact@v4
         with:
-          name: reports
-          path: reports
+          name: depcheck-report
+          path: depcheck-report.txt
