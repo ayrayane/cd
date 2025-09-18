@@ -14,62 +14,51 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
-      - name: Checkout code
-        uses: actions/checkout@v4
+    # Step 1: Checkout the code
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      # Step 2: Set up Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+    # Step 2: Set up Node.js
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
 
-      # Step 3: Install dependencies
-      - name: Install NPM dependencies
-        run: npm install
+    # Step 3: Install dependencies
+    - name: Install NPM dependencies
+      run: npm install
 
-      # Step 4: Generate SBOM for Node.js
-      - name: Generate SBOM for Node.js
-        uses: anchore/sbom-action@v0
-        with:
-          format: spdx-json
-          artifact-name: sbom-node-js.json
+    # Step 6: Generate SBOM for Javascript using Anchore's SBOM Action
+    - name: Generate SBOM for Docker image
+      uses: anchore/sbom-action@v0
+      with:
+        format: spdx-json
+        artifact-name: sbom-node-js.json
 
-      # Step 5: Build Docker image
-      - name: Build Docker Image
-        run: docker build -t my-node-app:latest .
+    # Step 5: Build Docker image
+    - name: Build Docker Image
+      run: |
+        docker build -t my-node-app:latest .
+    # Step 6: Generate SBOM for Docker image using Anchore's SBOM Action
+    - name: Generate SBOM for Docker image
+      uses: anchore/sbom-action@v0
+      with:
+        image: my-node-app:latest
+        format: spdx-json
+        artifact-name: sbom-docker-image.json
 
-      # Step 6: Generate SBOM for Docker image
-      - name: Generate SBOM for Docker image
-        uses: anchore/sbom-action@v0
-        with:
-          image: my-node-app:latest
-          format: spdx-json
-          artifact-name: sbom-docker-image.json
+    - name: SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@v5.3.1 # Ex: v4.1.0 or sha1, See the latest version at https://github.com/marketplace/actions/official-sonarqube-scan
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      # Step 7: SonarCloud Scan
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v5.3.1
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: "https://sonarcloud.io"
-        with:
-          args: >
-            -Dsonar.projectKey=ayrayane_cd
-            -Dsonar.organization=ayrayane
+    - uses: 3r1co/dependency-check-action@master
+      name: OWASP Dependency Check
+      with:
+        Project-Name: TestApp
 
-      # Step 8: Dependency Check using depcheck
-      - name: Dependency Check
-        run: |
-          npm install -g depcheck
-          # Crée un dossier pour les rapports
-          mkdir -p reports
-          # Génère le rapport depcheck dans ce dossier
-          depcheck . > reports/depcheck-report.txt || true
-
-      # Step 9: Archive dependency check report
-      - name: Archive dependency check report
-        uses: actions/upload-artifact@v4
-        with:
-          name: depcheck-report
-          path: reports/depcheck-report.txt
+    - name: Archive dependency check reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: reports
+        path: reports
